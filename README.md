@@ -13,8 +13,8 @@ FEATURED:
   4. Smart auto close brackets and quoctes.
   5. Smart delete brackets and quoctes.
 
-============
 Comliter and add to geany plugin:
+============
 
 * On Linux 64bit:
     - Open terminal and run this command:
