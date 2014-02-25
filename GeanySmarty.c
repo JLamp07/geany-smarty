@@ -255,9 +255,13 @@ gboolean smart_indent(ScintillaObject *sci, gint cur_pos, gint left_char, gint r
 	gint current_line_indent = sci_get_line_indentation(sci, current_line);
 	gint tag_width = sci_get_tab_width(sci);
 
-	if(left_char == '{'){
-		if(right_char != '}'){
+	if(left_char == '{' || left_char == '('){
+		if(left_char == '{' && right_char != '}'){
 			scintilla_send_message(sci, SCI_INSERTTEXT, cur_pos, (sptr_t)"}");
+		}
+		
+		if(left_char == '(' && right_char != ')'){
+			scintilla_send_message(sci, SCI_INSERTTEXT, cur_pos, (sptr_t)")");
 		}
 		
 		gint cursor_line = sci_get_position_from_line(sci, current_line + 1);
