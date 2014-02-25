@@ -6,7 +6,7 @@ Geany Plugin: Smart auto close xml/html tag, smart indent, highlight match xml/h
 FEATURED:
 ============
   1. Smart auto close XML/HTML tag with mutil tag. 
-      EX: <div><a href="http://www.thegioiwebre.com/c20-thiet-ke-web-ban-hang.html">, only type </, geany-smarty will auto           add </a>, type </ again geany-smarty will auto add </div>
+      EX: &lt;div&gt;<a href="http://www.thegioiwebre.com/c20-thiet-ke-web-ban-hang.html">, only type </, geany-smarty will auto           add </a>, type </ again geany-smarty will auto add </div>
      
   2. Smart indent close XML/HTML tag such as open tag when enter and close tag with </
   3. Highlight open and close XML/HTML tag when cursor inside tag.
