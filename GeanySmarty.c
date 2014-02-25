@@ -177,7 +177,7 @@ Tag find_matching_tag(ScintillaObject *sci, gint cur_pos, gboolean is_highlight,
 	return tag_data;
 }
 
-gboolean auto_close_tag(ScintillaObject *sci, gint cur_pos, gboolean open_bracket){
+gboolean smart_close_tag(ScintillaObject *sci, gint cur_pos, gboolean open_bracket){
 	Tag tag = find_matching_tag(sci, cur_pos, FALSE, TRUE);
 	
 	if(tag.tag_name != NULL){
@@ -220,7 +220,7 @@ gboolean auto_close_tag(ScintillaObject *sci, gint cur_pos, gboolean open_bracke
 	return FALSE;
 }
 
-gboolean auto_close_bracket_and_quocte(ScintillaObject *sci, gint cur_pos, gint left_ch, gint current_ch, gint right_ch){
+gboolean smart_close_bracket_and_quocte(ScintillaObject *sci, gint cur_pos, gint left_ch, gint current_ch, gint right_ch){
 	switch(current_ch){
 		case '}': if(right_ch == '}'){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;}
 		case ')': if(right_ch == ')'){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;}
@@ -264,7 +264,7 @@ static gboolean on_key_press(GtkWidget *widget, GdkEventKey *event, gpointer use
 	right_ch = sci_get_char_at(data->sci, cur_pos);
 	
 	if(smarty_data->smart_close_bracket){
-		return auto_close_bracket_and_quocte(data->sci, cur_pos, left_ch, current_ch, right_ch);
+		return smart_close_bracket_and_quocte(data->sci, cur_pos, left_ch, current_ch, right_ch);
 	}
 	
 	if(smarty_data->smart_auto_close_xml_tag){
@@ -272,13 +272,13 @@ static gboolean on_key_press(GtkWidget *widget, GdkEventKey *event, gpointer use
 			case 23://HTML
 				if(current_ch == '/'){
 					if(left_ch == '<'){
-						return auto_close_tag(data->sci, cur_pos, FALSE);
+						return smart_close_tag(data->sci, cur_pos, FALSE);
 					}
 				}else if(current_ch == '>'){
 					if(left_ch == '<') return FALSE;
 					scintilla_send_message(data->sci, SCI_INSERTTEXT, cur_pos, (sptr_t)">");
 					sci_set_current_position(data->sci, ++cur_pos, TRUE);
-					return auto_close_tag(data->sci, cur_pos, TRUE);
+					return smart_close_tag(data->sci, cur_pos, TRUE);
 				}
 		}
 	}
