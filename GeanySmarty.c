@@ -1,6 +1,7 @@
 #include <geanyplugin.h>
 #include <glib.h>
-#include <geany/scintilla/Scintilla.h>
+#include <gdk/gdkkeysyms.h>
+#include <gtk-2.0/gdk/gdkkeysyms-compat.h>
 
 GeanyPlugin *geany_plugin;
 GeanyData *geany_data;
@@ -9,7 +10,10 @@ GeanyFunctions *geany_functions;
 PLUGIN_VERSION_CHECK(211)
 
 PLUGIN_SET_INFO("Geany Smarty", 
-		"Smart auto close xml/html tag, smart indent, highlight match xml/html tag", 
+		"Smart auto close xml/html tag, "
+		"smart indent, highlight match xml/html tag, "
+		"smart close brackets and quoctes, "
+		"smart delete brackets and quoctes", 
 		"1.0", "JLamp 07 <jlamp6789@gmail.com>");
 
 typedef struct{
@@ -220,13 +224,27 @@ gboolean smart_close_tag(ScintillaObject *sci, gint cur_pos, gboolean open_brack
 	return FALSE;
 }
 
-gboolean smart_close_bracket_and_quocte(ScintillaObject *sci, gint cur_pos, gint left_ch, gint current_ch, gint right_ch){
+gboolean smart_close_bracket_and_quocte(ScintillaObject *sci, gint cur_pos, gint current_ch, gint right_ch){
 	switch(current_ch){
 		case '}': if(right_ch == '}'){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;}
 		case ')': if(right_ch == ')'){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;}
 		case ']': if(right_ch == ']'){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;}
 		case '\'': if(right_ch == '\''){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;}
 		case '"': if(right_ch == '"'){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;}
+		case '<': if(right_ch == '>'){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;}
+	}
+	
+	return FALSE;
+}
+
+gboolean smart_delete_bracket_and_quocte(ScintillaObject *sci, gint cur_pos, gint left_ch, gint right_ch){
+	switch(left_ch){
+		case '{': if(right_ch == '}'){scintilla_send_message(sci, SCI_DELETERANGE, cur_pos - 1, 2); return TRUE;}
+		case '(': if(right_ch == ')'){scintilla_send_message(sci, SCI_DELETERANGE, cur_pos - 1, 2); return TRUE;}
+		case '[': if(right_ch == ']'){scintilla_send_message(sci, SCI_DELETERANGE, cur_pos - 1, 2); return TRUE;}
+		case '"': if(right_ch == '"'){scintilla_send_message(sci, SCI_DELETERANGE, cur_pos - 1, 2); return TRUE;}
+		case '\'': if(right_ch == '\''){scintilla_send_message(sci, SCI_DELETERANGE, cur_pos - 1, 2); return TRUE;}
+		case '<': if(right_ch == '>'){scintilla_send_message(sci, SCI_DELETERANGE, cur_pos - 1, 2); return TRUE;}
 	}
 	
 	return FALSE;
@@ -238,14 +256,18 @@ gboolean smart_indent(ScintillaObject *sci, gint cur_pos, gint left_char, gint r
 	gint tag_width = sci_get_tab_width(sci);
 
 	if(left_char == '{'){
+		if(right_char != '}'){
+			scintilla_send_message(sci, SCI_INSERTTEXT, cur_pos, (sptr_t)"}");
+		}
+		
 		gint cursor_line = sci_get_position_from_line(sci, current_line + 1);
-		scintilla_send_message(sci, SCI_INSERTTEXT, cur_pos, (sptr_t)"\n\n}");//insert close bracket }
-		sci_set_line_indentation(sci, current_line + 2, current_line_indent);//set indent for close bracket }
+		scintilla_send_message(sci, SCI_INSERTTEXT, cur_pos, (sptr_t)"\n\n");//insert close bracket }
 		sci_set_line_indentation(sci, current_line + 1, current_line_indent + tag_width);//set indent for current cursor line
+		sci_set_line_indentation(sci, current_line + 2, current_line_indent);//set indent for close bracket }
 		if(file_type_id == 15){//CSS
-			sci_set_current_position(sci, cursor_line + current_line_indent + tag_width - 3, FALSE);//move cursor to current indent
+			sci_set_current_position(sci, cursor_line + current_line_indent, FALSE);//move cursor to current indent
 		}else{
-			sci_set_current_position(sci, cursor_line + current_line_indent + tag_width, FALSE);//move cursor to current indent
+			sci_set_current_position(sci, cursor_line + current_line_indent + tag_width - 1, FALSE);//move cursor to current indent
 		}
 		return TRUE;
 	}
@@ -263,10 +285,6 @@ static gboolean on_key_press(GtkWidget *widget, GdkEventKey *event, gpointer use
 	left_ch = sci_get_char_at(data->sci, cur_pos - 1);
 	right_ch = sci_get_char_at(data->sci, cur_pos);
 	
-	if(smarty_data->smart_close_bracket){
-		return smart_close_bracket_and_quocte(data->sci, cur_pos, left_ch, current_ch, right_ch);
-	}
-	
 	if(smarty_data->smart_auto_close_xml_tag){
 		switch(data->doc->file_type->id){
 			case 23://HTML
@@ -283,8 +301,16 @@ static gboolean on_key_press(GtkWidget *widget, GdkEventKey *event, gpointer use
 		}
 	}
 	
-	if(smarty_data->smart_indent && (gint)current_ch == 65293){
+	if(smarty_data->smart_indent && current_ch == GDK_Return){
 		return smart_indent(data->sci, cur_pos, left_ch, right_ch, data->doc->file_type->id);
+	}
+	
+	if(smarty_data->smart_close_bracket){
+		if(current_ch == GDK_BackSpace){
+			return smart_delete_bracket_and_quocte(data->sci, cur_pos, left_ch, right_ch);
+		}
+		
+		return smart_close_bracket_and_quocte(data->sci, cur_pos, current_ch, right_ch);
 	}
 
 	return FALSE;
@@ -519,4 +545,8 @@ GtkWidget *plugin_configure(GtkDialog *dialog){
 void plugin_cleanup(void){
 	g_free(smarty_data->config_file);
 	g_free(smarty_data);
+}
+
+void plugin_help(void){
+	utils_open_browser("https://github.com/JLamp07/geany-smarty");
 }
