@@ -10,7 +10,7 @@ FEATURED:
      
   2. Smart indent close XML/HTML tag such as open tag when enter and close tag with &lt;/
   3. Highlight open and close XML/HTML tag when cursor inside tag.
-  4. Smart auto close brackets and quoctes.
+  4. Smart auto close brackets and quoctes combined with Auto-close quoctes and brackets[in Edit->Preferences->Editor].
   5. Smart delete brackets and quoctes.
 
 Comliter and add to geany plugin:
