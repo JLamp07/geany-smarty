@@ -226,12 +226,12 @@ gboolean smart_close_tag(ScintillaObject *sci, gint cur_pos, gboolean open_brack
 
 gboolean smart_close_bracket_and_quocte(ScintillaObject *sci, gint cur_pos, gint current_ch, gint right_ch){
 	switch(current_ch){
-		case '}': if(right_ch == '}'){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;}
-		case ')': if(right_ch == ')'){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;}
-		case ']': if(right_ch == ']'){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;}
-		case '\'': if(right_ch == '\''){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;}
-		case '"': if(right_ch == '"'){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;}
-		case '<': if(right_ch == '>'){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;}
+		case '}': if(right_ch == '}'){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;} break;
+		case ')': if(right_ch == ')'){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;} break;
+		case ']': if(right_ch == ']'){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;} break;
+		case '\'': if(right_ch == '\''){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;} break;
+		case '"': if(right_ch == '"'){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;} break;
+		case '<': if(right_ch == '>'){sci_set_current_position(sci, cur_pos + 1, TRUE); return TRUE;} break;
 	}
 	
 	return FALSE;
@@ -239,12 +239,12 @@ gboolean smart_close_bracket_and_quocte(ScintillaObject *sci, gint cur_pos, gint
 
 gboolean smart_delete_bracket_and_quocte(ScintillaObject *sci, gint cur_pos, gint left_ch, gint right_ch){
 	switch(left_ch){
-		case '{': if(right_ch == '}'){scintilla_send_message(sci, SCI_DELETERANGE, cur_pos - 1, 2); return TRUE;}
-		case '(': if(right_ch == ')'){scintilla_send_message(sci, SCI_DELETERANGE, cur_pos - 1, 2); return TRUE;}
-		case '[': if(right_ch == ']'){scintilla_send_message(sci, SCI_DELETERANGE, cur_pos - 1, 2); return TRUE;}
-		case '"': if(right_ch == '"'){scintilla_send_message(sci, SCI_DELETERANGE, cur_pos - 1, 2); return TRUE;}
-		case '\'': if(right_ch == '\''){scintilla_send_message(sci, SCI_DELETERANGE, cur_pos - 1, 2); return TRUE;}
-		case '<': if(right_ch == '>'){scintilla_send_message(sci, SCI_DELETERANGE, cur_pos - 1, 2); return TRUE;}
+		case '{': if(right_ch == '}'){scintilla_send_message(sci, SCI_DELETERANGE, cur_pos - 1, 2); return TRUE;} break;
+		case '(': if(right_ch == ')'){scintilla_send_message(sci, SCI_DELETERANGE, cur_pos - 1, 2); return TRUE;} break;
+		case '[': if(right_ch == ']'){scintilla_send_message(sci, SCI_DELETERANGE, cur_pos - 1, 2); return TRUE;} break;
+		case '"': if(right_ch == '"'){scintilla_send_message(sci, SCI_DELETERANGE, cur_pos - 1, 2); return TRUE;} break;
+		case '\'': if(right_ch == '\''){scintilla_send_message(sci, SCI_DELETERANGE, cur_pos - 1, 2); return TRUE;} break;
+		case '<': if(right_ch == '>'){scintilla_send_message(sci, SCI_DELETERANGE, cur_pos - 1, 2); return TRUE;} break;
 	}
 	
 	return FALSE;
@@ -254,8 +254,16 @@ gboolean smart_indent(ScintillaObject *sci, gint cur_pos, gint left_char, gint r
 	gint current_line = sci_get_current_line(sci);
 	gint current_line_indent = sci_get_line_indentation(sci, current_line);
 	gint tag_width = sci_get_tab_width(sci);
-
+	
 	if(left_char == '{' || left_char == '('){
+		g_print("%d, %d", current_line_indent, sci_get_line_indentation(sci, current_line + 1));
+		
+		if(current_line_indent + tag_width == sci_get_line_indentation(sci, current_line + 1)){
+			return FALSE;
+		}
+		
+		sci_start_undo_action(sci);
+		
 		if(left_char == '{' && right_char != '}'){
 			scintilla_send_message(sci, SCI_INSERTTEXT, cur_pos, (sptr_t)"}");
 		}
@@ -264,15 +272,12 @@ gboolean smart_indent(ScintillaObject *sci, gint cur_pos, gint left_char, gint r
 			scintilla_send_message(sci, SCI_INSERTTEXT, cur_pos, (sptr_t)")");
 		}
 		
-		gint cursor_line = sci_get_position_from_line(sci, current_line + 1);
 		scintilla_send_message(sci, SCI_INSERTTEXT, cur_pos, (sptr_t)"\n\n");//insert close bracket }
 		sci_set_line_indentation(sci, current_line + 1, current_line_indent + tag_width);//set indent for current cursor line
 		sci_set_line_indentation(sci, current_line + 2, current_line_indent);//set indent for close bracket }
-		if(file_type_id == 15){//CSS
-			sci_set_current_position(sci, cursor_line + current_line_indent, FALSE);//move cursor to current indent
-		}else{
-			sci_set_current_position(sci, cursor_line + current_line_indent + tag_width - 1, FALSE);//move cursor to current indent
-		}
+		sci_set_current_position(sci, sci_get_line_end_position(sci, current_line + 1), FALSE);//move cursor to current indent
+		
+		sci_end_undo_action(sci);
 		return TRUE;
 	}
 	
