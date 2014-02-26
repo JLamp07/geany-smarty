@@ -250,10 +250,33 @@ gboolean smart_delete_bracket_and_quocte(ScintillaObject *sci, gint cur_pos, gin
 	return FALSE;
 }
 
+void do_indent(ScintillaObject *sci, gint cur_pos, gint current_line, gint current_line_indent, gint tag_width){
+	scintilla_send_message(sci, SCI_INSERTTEXT, cur_pos, (sptr_t)"\n\n");//insert close bracket }
+	sci_set_line_indentation(sci, current_line + 1, current_line_indent + tag_width);//set indent for current cursor line
+	sci_set_line_indentation(sci, current_line + 2, current_line_indent);//set indent for close bracket }
+	sci_set_current_position(sci, sci_get_line_end_position(sci, current_line + 1), FALSE);//move cursor to current indent
+}
+
 gboolean smart_indent(ScintillaObject *sci, gint cur_pos, gint left_char, gint right_char, gint file_type_id){
+	
 	gint current_line = sci_get_current_line(sci);
 	gint current_line_indent = sci_get_line_indentation(sci, current_line);
 	gint tag_width = sci_get_tab_width(sci);
+	
+	if(left_char == '>' && right_char == '<'){
+		gint tag_open_start = sci_find_matching_brace(sci, cur_pos - 1);
+		gint tag_close_end = sci_find_matching_brace(sci, cur_pos);
+		gchar *open_tag = sci_get_contents_range(sci, tag_open_start, cur_pos);
+		gchar *close_tag = sci_get_contents_range(sci, cur_pos, tag_close_end + 1);
+		if(is_open_tag(open_tag) && is_close_tag(close_tag) && g_strcmp0(get_tag_name(open_tag), get_tag_name(close_tag)) == 0){
+			sci_start_undo_action(sci);
+			do_indent(sci, cur_pos, current_line, current_line_indent, tag_width);
+			sci_end_undo_action(sci);
+			g_free(open_tag);
+			g_free(close_tag);
+			return TRUE;
+		}
+	}
 	
 	if(left_char == '{' || left_char == '('){
 		g_print("%d, %d", current_line_indent, sci_get_line_indentation(sci, current_line + 1));
@@ -272,10 +295,7 @@ gboolean smart_indent(ScintillaObject *sci, gint cur_pos, gint left_char, gint r
 			scintilla_send_message(sci, SCI_INSERTTEXT, cur_pos, (sptr_t)")");
 		}
 		
-		scintilla_send_message(sci, SCI_INSERTTEXT, cur_pos, (sptr_t)"\n\n");//insert close bracket }
-		sci_set_line_indentation(sci, current_line + 1, current_line_indent + tag_width);//set indent for current cursor line
-		sci_set_line_indentation(sci, current_line + 2, current_line_indent);//set indent for close bracket }
-		sci_set_current_position(sci, sci_get_line_end_position(sci, current_line + 1), FALSE);//move cursor to current indent
+		do_indent(sci, cur_pos, current_line, current_line_indent, tag_width);
 		
 		sci_end_undo_action(sci);
 		return TRUE;
